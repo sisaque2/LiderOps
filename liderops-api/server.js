@@ -1,7 +1,6 @@
 const express = require('express');
 require('dotenv').config();
 
-// 1. Importação dos roteadores
 const userRoutes = require('./src/routes/userRoutes');
 const empresaRoutes = require('./src/routes/empresaRoutes');
 

@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controller/userController');
-const userValidator = require('../helpers/userValidator');
+const { validateBody, validateId } = require('../helpers/userValidator');
 
-// Mapeamento dos endpoints CRUD
-router.post('/register', userValidator, userController.createUser);
+router.post('/', validateBody, userController.createUser);
 router.get('/', userController.getAllUsers);
-router.put('/:id', userController.updateUser);
-router.delete('/:id', userController.deleteUser);
+router.get('/:id', validateId, userController.getUserById);
+router.put('/:id', validateId, validateBody, userController.updateUser);
+router.delete('/:id', validateId, userController.deleteUser);
 
 module.exports = router;
