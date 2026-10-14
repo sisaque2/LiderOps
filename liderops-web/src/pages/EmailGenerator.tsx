@@ -5,26 +5,31 @@ export default function EmailGenerator() {
   const [emailGerado, setEmailGerado] = useState('');
   const [isGerando, setIsGerando] = useState(false);
 
-  // Função que simula a chamada para a nossa API da OpenAI
-  const handleGerarEmail = () => {
+  // Função que chama a rota real do Gemini no Backend
+  const handleGerarEmail = async () => {
+    if (!contexto.trim()) return;
     setIsGerando(true);
     
-    // Simula o tempo de resposta do back-end (1.5 segundos)
-    setTimeout(() => {
-      setEmailGerado(`Assunto: Otimização de custos com embalagens na [Nome da Empresa]
+    try {
+      const resposta = await fetch('http://localhost:3000/api/ia/gerar-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contexto })
+      });
 
-Olá [Nome do Cliente], tudo bem?
+      const dados = await resposta.json();
 
-Vi que a sua empresa atua fortemente no setor industrial e preza pela segurança logística. Sou da Liderkraft e ajudo operações comerciais a reduzirem quebras no transporte utilizando caixas de papelão pardo com laminação em offset de alta resistência.
+      if (!resposta.ok) {
+        setEmailGerado(`Erro ao gerar script: ${dados.mensagem || dados.erro}`);
+        return;
+      }
 
-Considerando o seu cenário: "${contexto || 'Busca por eficiência logística'}", acredito que podemos apresentar uma redução de até 15% nos custos de embalagem no fechamento do próximo trimestre.
-
-Faz sentido explorarmos esse tema em uma breve ligação de 5 minutos na próxima terça-feira?
-
-Abraço,
-Equipe Comercial`);
+      setEmailGerado(dados.script);
+    } catch (error) {
+      setEmailGerado('Falha de conexão com o servidor da API (verifique se a porta 3000 está rodando).');
+    } finally {
       setIsGerando(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -73,16 +78,18 @@ Equipe Comercial`);
 
         {emailGerado && (
           <div className="mt-6 flex gap-3">
-             <button className="flex-1 bg-white text-blue-900 font-medium py-2 rounded hover:bg-gray-100 transition-colors">
-               Copiar Texto
-             </button>
-             <button className="flex-1 bg-transparent border border-white text-white font-medium py-2 rounded hover:bg-blue-800 transition-colors">
-               Salvar nos Favoritos
-             </button>
+            <button
+            onClick={() => navigator.clipboard.writeText(emailGerado)}
+            className="flex-1 bg-white text-blue-900 font-medium py-2 rounded hover:bg-gray-100 transition-colors cursor-pointer"
+            >
+              Copiar Texto
+            </button>
+            <button className="flex-1 bg-transparent border border-white text-white font-medium py-2 rounded hover:bg-blue-800 transition-colors">
+              Salvar nos Favoritos
+            </button>
           </div>
         )}
       </div>
-
     </div>
   );
 }
