@@ -2,51 +2,101 @@
 
 ## 📌 Visão do Produto
 
-O *LiderOps* é uma aplicação web focada em oferecer assistência comercial inteligente. Desenvolvido para otimizar a rotina de vendas e operações, o sistema atua como um facilitador técnico, centralizando dados e automatizando processos para a equipe comercial.
-
-O grande diferencial do projeto é a utilização de Inteligência Artificial integrada para a criação automatizada de e-mails de primeiro contato. Isso permite que a equipe ganhe agilidade e reduza o tempo gasto em tarefas manuais, mantendo uma comunicação comercial estruturada e eficiente.
+O **LiderOps** é um hub web de Revenue Operations e pré-vendas B2B feito para a Liderkraft Embalagens (papelão ondulado e papelão acoplado ao offset). Ele centraliza a rotina do time comercial: garimpar empresas dentro do ICP, enriquecer CNPJs em lote, exportar a base pronta para o HubSpot, gerar e-mails de prospecção com IA e acompanhar as tarefas do dia em um kanban.
 
 ## 🎯 Público-Alvo
 
-Assistentes comerciais, vendedores e analistas de operações que buscam otimizar seu tempo, automatizar a redação de e-mails e contar com um sistema web leve e direto para apoiar o relacionamento inicial com os clientes.
+LDRs, SDRs, vendedores e analistas de RevOps que precisam de dados cadastrais confiáveis e menos trabalho manual na prospecção.
+
+## ✅ Funcionalidades
+
+| Requisito | Tela | Descrição |
+|---|---|---|
+| RF01 | Login / Usuários | Cadastro, login com JWT + bcrypt e perfis **admin** e **comum** |
+| RF02 | Higienizar Dados | Garimpo na base da Receita Federal por UF e CNAE dentro do ICP |
+| RF03 | Higienizar Dados | Enriquecimento em lote via Brasil API e exportação `.xlsx` |
+| RF04 | Gerar E-mail | E-mails B2B com Google Gemini, assinados pelo usuário logado |
+| RF05 | Tarefas | Kanban Aguardando → Em andamento → Concluídas |
+
+Detalhes em [`docs/rf.md`](docs/rf.md).
 
 ## ⚙️ Arquitetura e Tecnologias
 
-O projeto foi construído priorizando uma arquitetura simples e funcional:
+```
+liderops-web  (React 19 + TypeScript + Vite + Tailwind)
+      │  fetch + Authorization: Bearer <JWT>
+      ▼
+liderops-api  (Node.js + Express 5)
+      ├── MySQL no Amazon RDS (mysql2)
+      ├── Brasil API (enriquecimento de CNPJ)
+      └── Google Gemini (geração de e-mails)
+```
 
-* *Front-end:* Interface de usuário desenvolvida com *React e Tailwind*, garantindo um layout responsivo, leve e de fácil manutenção.
-* *Integração Externa (APIs):* Conexões com APIs de Inteligência Artificial e Banco de Dados em Nuvem para o processamento e geração dinâmica dos textos e e-mails comerciais.
-* *Banco de Dados:* Estrutura relacional para armazenamento das informações dos contatos, configurações de sistema e históricos, garantindo a persistência dos dados de forma segura.
+Tabelas criadas automaticamente pela API ao iniciar (`src/config/initDb.js`): `usuarios`, `empresas_prospectadas`, `empresas_receita_bruta` e `tarefas`. No primeiro boot ela também cria o administrador padrão e carrega 26 empresas reais (conferidas na Brasil API) na base da Receita, para o garimpo funcionar sem o CSV completo.
 
-## LiderOps - Front-end (Avaliação P1)
+## 🚀 Como rodar localmente
 
-Esta é a interface da aplicação LiderOps, desenvolvida com React, Vite, TypeScript e Tailwind CSS, correspondente à entrega da P1 (Desenvolvimento de Interfaces de Usuário para Web).
+Pré-requisitos: Node.js 20+ e um MySQL acessível (local ou RDS).
 
-### 🚀 Como rodar o projeto localmente
+**1. API**
+```bash
+cd liderops-api
+npm install
+cp .env.example .env   # preencha banco, JWT_SECRET e GEMINI_API_KEY
+npm start              # http://localhost:3000/api/status
+```
 
-Como o projeto foi construído utilizando Node.js e Vite, é necessário instalar as dependências antes de executá-lo pela primeira vez. Siga os passos abaixo:
-
-**Passo 1: Extrair e abrir a pasta**
-Após baixar o repositório em `.zip`, extraia os arquivos.
-Abra a pasta do projeto no VS Code (ou no seu terminal de preferência).
-
-**Passo 2: Navegar para o diretório do Front-end**
-No terminal, certifique-se de estar dentro da pasta do front-end:
+**2. Front-end** (em outro terminal)
 ```bash
 cd liderops-web
-```
-
-**Passo 3: Instalar as dependências**
-Execute o comando abaixo para que o Node Package Manager (NPM) baixe todas as bibliotecas necessárias (como o React, Vite e Tailwind CSS):
-```bash
 npm install
+npm run dev            # http://localhost:5173
 ```
 
-**Passo 4: Iniciar o servidor local**
-Com as dependências instaladas, inicie a aplicação com o comando:
+**Acesso inicial:** na primeira vez que a API sobe sem nenhum administrador no banco, ela cria um a partir de `ADMIN_NOME`, `ADMIN_CARGO`, `ADMIN_EMAIL` e `ADMIN_PASSWORD` do `.env` (padrão: `admin@liderembalagens.com.br` / `123456`). Novas contas criadas pela tela entram como perfil comum.
+
+**Senhas:** cada usuário troca a própria senha em *Minha conta* (clicando no nome, no topo). Em caso de esquecimento, um administrador define uma senha provisória na aba *Usuários*.
+
+**Banco antigo:** se o banco já tiver tabelas de versões anteriores do projeto, a API adiciona sozinha as colunas que faltarem ao iniciar, sem apagar dados.
+
+## 🔌 Endpoints da API
+
+Todas as rotas, exceto login e cadastro, exigem o header `Authorization: Bearer <token>`.
+
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| POST | `/api/usuarios/login` | público | Login, devolve token e usuário |
+| POST | `/api/usuarios` | público | Cadastro (perfil comum), devolve token |
+| GET | `/api/usuarios/me` | logado | Usuário da sessão |
+| PATCH | `/api/usuarios/me/senha` | logado | Troca a própria senha |
+| PATCH | `/api/usuarios/:id/senha` | admin | Redefine a senha de um usuário |
+| GET | `/api/usuarios` | admin | Lista usuários |
+| GET | `/api/usuarios/:id` | admin ou o próprio | Detalhe |
+| PUT | `/api/usuarios/:id` | admin ou o próprio | Edita (só admin muda perfil) |
+| DELETE | `/api/usuarios/:id` | admin | Exclui usuário |
+| GET | `/api/empresas/garimpar?uf=&cnae=&limite=` | logado | Garimpo na base da Receita |
+| POST | `/api/empresas/enriquecer-lote` | logado | Enriquece até 50 CNPJs |
+| GET | `/api/empresas/exportar` | logado | Planilha `.xlsx` |
+| POST | `/api/empresas/importar-receita` | admin | Importa CSV da Receita via stream |
+| GET/POST/PUT | `/api/empresas[/:id]` | logado | CRUD de empresas prospectadas |
+| DELETE | `/api/empresas/:id` | admin | Exclui empresa |
+| POST | `/api/ia/gerar-email` | logado | Gera e-mail com IA |
+| GET/POST | `/api/tarefas` | logado | Lista / cria tarefas do usuário |
+| PUT | `/api/tarefas/:id` | dono | Edita tarefa |
+| PATCH | `/api/tarefas/:id/status` | dono | Move no kanban |
+| PATCH | `/api/tarefas/:id/ocultar` | dono | Oculta ou mostra |
+| DELETE | `/api/tarefas/:id` | dono | Exclui tarefa |
+
+## ☁️ Deploy na AWS (EC2 + RDS)
+
+A API também serve o front buildado, então basta um único processo Node na EC2:
+
 ```bash
-npm run dev
+git clone https://github.com/sisaque2/LiderOps.git && cd LiderOps
+cd liderops-web && npm install && npm run build && cd ..
+cd liderops-api && npm install && cp .env.example .env   # preencha com o endpoint do RDS
+sudo npm install -g pm2
+pm2 start server.js --name liderops && pm2 save
 ```
 
-**Passo 5: Acessar no navegador**
-O terminal exibirá um link local (geralmente `http://localhost:5173/`). Segure a tecla `Ctrl` (ou `Cmd` no Mac) e clique no link, ou copie e cole a URL no seu navegador. A interface do LiderOps com dados simulados será carregada imediatamente.
+Libere a porta da API (padrão 3000) no Security Group da EC2 e a porta 3306 do RDS para o Security Group da EC2. A aplicação fica em `http://<ip-publico-da-ec2>:3000`.
