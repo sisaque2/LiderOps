@@ -34,6 +34,10 @@ liderops-api  (Node.js + Express 5)
 
 Tabelas criadas automaticamente pela API ao iniciar (`src/config/initDb.js`): `usuarios`, `empresas_prospectadas`, `empresas_receita_bruta` e `tarefas`. No primeiro boot ela também cria o administrador padrão e carrega 26 empresas reais (conferidas na Brasil API) na base da Receita, para o garimpo funcionar sem o CSV completo.
 
+## 🗂️ Carga da base da Receita Federal
+
+A base completa de CNPJs (dados abertos da Receita, atualizada mensalmente) tem dezenas de GB e não é processada pelo LiderOps. Ela é tratada fora do projeto por um script Python com DuckDB, que cruza os arquivos de Empresas, Estabelecimentos e Municípios e mantém só as empresas ativas dentro do ICP (UF/cidades atendidas, porte e capital social mínimo). O CSV resultante, com algumas dezenas de milhares de linhas, é carregado pelo administrador na rota `POST /api/empresas/importar-receita`, que faz a leitura via stream e a gravação em lotes no MySQL.
+
 ## 🚀 Como rodar localmente
 
 Pré-requisitos: Node.js 20+ e um MySQL acessível (local ou RDS).
