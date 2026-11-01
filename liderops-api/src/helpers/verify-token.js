@@ -1,20 +1,29 @@
 const jwt = require('jsonwebtoken');
+const getToken = require('./get-token');
+const { JWT_SECRET } = require('../config/auth');
 
+// Middleware de autenticação: só deixa passar requisições com JWT válido
 const verifyToken = (req, res, next) => {
-    const bearerHeader = req.headers['authorization'];
-    const token = bearerHeader && bearerHeader.split(' ')[1];
+    const token = getToken(req);
 
     if (!token) {
-        return res.status(401).json({ erro: 'Acesso negado. Token não fornecido.' });
+        return res.status(401).json({
+            erro: 'Acesso negado',
+            mensagem: 'Faça login para acessar este recurso.'
+        });
     }
 
     try {
-        const secret = process.env.JWT_SECRET || 'liderops_super_secret';
-        const verified = jwt.verify(token, secret);
-        req.user = verified;
+        req.user = jwt.verify(token, JWT_SECRET);
         next();
     } catch (error) {
-        res.status(400).json({ erro: 'Token inválido.' });
+        const expirado = error.name === 'TokenExpiredError';
+        return res.status(401).json({
+            erro: expirado ? 'Sessão expirada' : 'Token inválido',
+            mensagem: expirado
+                ? 'Sua sessão expirou. Faça login novamente.'
+                : 'Token de acesso inválido. Faça login novamente.'
+        });
     }
 };
 

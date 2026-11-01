@@ -7,6 +7,16 @@ const ExcelJS = require('exceljs');
 // Função utilitária que cria um "freio" (delay em milissegundos) usando Promises
 const esperar = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Traduz o erro da Brasil API para uma mensagem que o LDR entenda na tela
+function motivoFalhaBrasilApi(error) {
+    const status = error.response?.status;
+    if (status === 404) return 'CNPJ não encontrado na Receita';
+    if (status === 429) return 'Limite de consultas da Brasil API atingido, tente novamente em instantes';
+    if (status) return `Brasil API indisponível (HTTP ${status})`;
+    if (error.code && error.code.startsWith('ER_')) return 'Falha ao salvar no banco de dados';
+    return 'Sem conexão com a Brasil API';
+}
+
 module.exports = {
     // CREATE VIA BRASIL API (POST /api/empresas/enriquecer)
     async enriquecerEmpresa(req, res) {
@@ -274,10 +284,7 @@ module.exports = {
                     status_sincronizacao: 'Pronto HubSpot'
                 });
             } catch (error) {
-                falhas.push({
-                    cnpj,
-                    motivo: error.response?.status === 404 ? 'CNPJ não encontrado na Receita' : error.message
-                });
+                falhas.push({ cnpj, motivo: motivoFalhaBrasilApi(error) });
             }
 
             // Aplica o freio de 800ms entre um CNPJ e outro (exceto no último item da fila)

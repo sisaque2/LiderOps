@@ -1,20 +1,17 @@
 const jwt = require('jsonwebtoken');
+const { JWT_SECRET, JWT_EXPIRES_IN } = require('../config/auth');
 
-const createUserToken = async (user, req, res) => {
-    // Criação do token com validade (ex: 24h)
-    const token = jwt.sign(
+// Gera o JWT com o mínimo necessário para autorizar as rotas (id e perfil)
+function createUserToken(usuario) {
+    return jwt.sign(
         {
-            nome: user.nome,
-            id: user.id_usuario
+            id: usuario.id_usuario,
+            nome: usuario.nome,
+            perfil: usuario.perfil
         },
-        process.env.JWT_SECRET
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
     );
-
-    res.status(200).json({
-        mensagem: 'Autenticação realizada com sucesso!',
-        token: token,
-        usuarioId: user.id_usuario
-    });
-};
+}
 
 module.exports = createUserToken;
