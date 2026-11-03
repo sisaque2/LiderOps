@@ -18,7 +18,7 @@ const COLUNAS_ESPERADAS = {
         razao_social: "VARCHAR(255) NOT NULL DEFAULT ''",
         endereco: "VARCHAR(255) DEFAULT 'Não informado'",
         cnae: "VARCHAR(50) DEFAULT 'Não informado'",
-        status_sincronizacao: "VARCHAR(50) DEFAULT 'Pronto HubSpot'",
+        status_sincronizacao: "VARCHAR(50) DEFAULT 'Enriquecida'",
         criado_em: 'TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP'
     },
     empresas_receita_bruta: {
@@ -113,7 +113,7 @@ async function inicializarBanco() {
                 razao_social VARCHAR(255) NOT NULL,
                 endereco VARCHAR(255) DEFAULT 'Não informado',
                 cnae VARCHAR(50) DEFAULT 'Não informado',
-                status_sincronizacao VARCHAR(50) DEFAULT 'Pronto HubSpot',
+                status_sincronizacao VARCHAR(50) DEFAULT 'Enriquecida',
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);
@@ -142,6 +142,12 @@ async function inicializarBanco() {
         for (const [tabela, colunas] of Object.entries(COLUNAS_ESPERADAS)) {
             await atualizarEstrutura(tabela, colunas);
         }
+
+        // O sistema só exporta .xlsx: troca o status antigo "Pronto HubSpot" por "Enriquecida"
+        await db.query("ALTER TABLE empresas_prospectadas ALTER status_sincronizacao SET DEFAULT 'Enriquecida'");
+        await db.query(
+            "UPDATE empresas_prospectadas SET status_sincronizacao = 'Enriquecida' WHERE status_sincronizacao = 'Pronto HubSpot'"
+        );
 
         // 5. Tarefas do kanban. O tipo do id segue o de usuarios para a chave estrangeira funcionar em bancos antigos
         const tipoIdUsuario = (await colunasDaTabela('usuarios'))

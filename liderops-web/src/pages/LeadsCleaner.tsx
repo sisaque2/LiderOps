@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Alerta, { type MensagemAlerta } from '../components/Alerta';
+import { useConfirmacao } from '../hooks/useConfirmacao';
 import { apiDownload, apiFetch, mensagemDeErro } from '../config/api';
 import type { LeadEmpresa, Usuario } from '../types';
 
@@ -22,6 +23,8 @@ const buscarEmpresas = () => apiFetch<LeadEmpresa[]>('/empresas');
 const formatarCnpj = (cnpj: string) =>
   cnpj.length === 14 ? cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : cnpj;
 
+const dataLocal = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '');
+
 export default function LeadsCleaner({ usuario }: LeadsCleanerProps) {
   const [cnpjsInput, setCnpjsInput] = useState('');
   const [leads, setLeads] = useState<LeadEmpresa[]>([]);
@@ -35,7 +38,22 @@ export default function LeadsCleaner({ usuario }: LeadsCleanerProps) {
   const [isGarimpando, setIsGarimpando] = useState(false);
   const [isExportando, setIsExportando] = useState(false);
 
+  const [busca, setBusca] = useState('');
+  const { confirmar, dialogo } = useConfirmacao();
+
   const ehAdmin = usuario.perfil === 'admin';
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const capturadasHoje = leads.filter((l) => dataLocal(l.criado_em) === hoje).length;
+
+  const termo = busca.trim().toLowerCase();
+  const termoDigitos = termo.replace(/\D/g, '');
+  const leadsFiltrados = termo
+    ? leads.filter(
+        (l) =>
+          l.razao_social.toLowerCase().includes(termo) ||
+          (termoDigitos !== '' && (l.cnpj.includes(termoDigitos) || l.cnae.includes(termoDigitos)))
+      )
+    : leads;
 
   // 1. Carrega as empresas já enriquecidas no MySQL
   useEffect(() => {
@@ -133,7 +151,9 @@ export default function LeadsCleaner({ usuario }: LeadsCleanerProps) {
 
   // 5. Exclusão (somente admin)
   const handleExcluir = async (lead: LeadEmpresa) => {
-    if (!lead.id_empresa || !window.confirm(`Excluir ${lead.razao_social} da base?`)) return;
+    if (!lead.id_empresa) return;
+    const ok = await confirmar('Excluir empresa', `${lead.razao_social} será removida da base higienizada.`);
+    if (!ok) return;
     try {
       await apiFetch(`/empresas/${lead.id_empresa}`, { method: 'DELETE' });
       setLeads((atual) => atual.filter((l) => l.id_empresa !== lead.id_empresa));
@@ -145,13 +165,14 @@ export default function LeadsCleaner({ usuario }: LeadsCleanerProps) {
 
   return (
     <div className="flex flex-col md:flex-row gap-6">
+      {dialogo}
       {/* Coluna Lateral */}
       <div className="w-full md:w-1/3 space-y-6">
         <div className="bg-[#0f172a] text-white p-6 rounded-lg shadow">
-          <span className="bg-green-500 text-xs font-bold px-2 py-1 rounded text-white mb-4 inline-block">INTEGRAÇÃO HUBSPOT</span>
-          <h2 className="text-xl font-bold mb-2">Sincronização Direta</h2>
+          <span className="bg-green-500 text-xs font-bold px-2 py-1 rounded text-white mb-4 inline-block">RECEITA + BRASIL API</span>
+          <h2 className="text-xl font-bold mb-2">Higienização Cadastral</h2>
           <p className="text-sm text-gray-300">
-            Extraia CNPJs pelo filtro ICP da Receita ou cole em lote para validação cadastral profunda via Brasil API.
+            Extraia CNPJs pelo filtro ICP da Receita ou cole em lote para validar o cadastro via Brasil API. A base fica salva e pode ser exportada em .xlsx.
           </p>
         </div>
 
@@ -219,14 +240,25 @@ export default function LeadsCleaner({ usuario }: LeadsCleanerProps) {
             <div className="text-2xl font-bold">{taxaSucesso}</div>
           </div>
           <div className="bg-white border border-gray-200 text-gray-800 p-4 rounded-lg shadow">
-            <div className="text-xs text-gray-500 mb-1">Auto-salvo no MySQL</div>
-            <div className="text-2xl font-bold text-[#0f172a]">Sim (Ativo)</div>
+            <div className="text-xs text-gray-500 mb-1">Capturadas Hoje</div>
+            <div className="text-2xl font-bold text-[#0f172a]">{String(capturadasHoje).padStart(2, '0')} CNPJs</div>
           </div>
         </div>
 
         {falhasLote.length > 0 && (
           <div className="bg-white p-4 rounded-lg shadow border border-red-100">
-            <h4 className="text-sm font-semibold text-red-700 mb-2">CNPJs que falharam no último lote</h4>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <h4 className="text-sm font-semibold text-red-700">CNPJs que falharam no último lote</h4>
+              <button
+                onClick={() => {
+                  setCnpjsInput(falhasLote.map((f) => f.cnpj).join('\n'));
+                  setAlerta({ tipo: 'info', texto: 'CNPJs com falha devolvidos para a lista. Clique em "Validar e Enriquecer Lote" para tentar de novo.' });
+                }}
+                className="text-xs font-medium text-[#0f172a] border border-gray-300 rounded px-3 py-1 hover:bg-gray-50 cursor-pointer"
+              >
+                Tentar de novo só as falhas
+              </button>
+            </div>
             <ul className="text-sm text-gray-600 space-y-1">
               {falhasLote.map((f) => (
                 <li key={f.cnpj}>
@@ -238,7 +270,7 @@ export default function LeadsCleaner({ usuario }: LeadsCleanerProps) {
         )}
 
         <div className="bg-white p-6 rounded-lg shadow border border-gray-100">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
             <h3 className="font-bold text-gray-800 text-lg">Base Higienizada Pronta</h3>
             <button
               onClick={handleExportarExcel}
@@ -249,6 +281,24 @@ export default function LeadsCleaner({ usuario }: LeadsCleanerProps) {
             </button>
           </div>
 
+          {leads.length > 0 && (
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <input
+                type="search"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Buscar por razão social, CNPJ ou CNAE"
+                aria-label="Buscar na base"
+                className="flex-1 min-w-56 p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-green-500 focus:outline-none"
+              />
+              {termo && (
+                <span className="text-xs text-gray-500">
+                  {leadsFiltrados.length} de {leads.length} empresas
+                </span>
+              )}
+            </div>
+          )}
+
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b">
@@ -257,29 +307,27 @@ export default function LeadsCleaner({ usuario }: LeadsCleanerProps) {
                   <th className="px-4 py-3">Razão Social</th>
                   <th className="px-4 py-3">Endereço Principal</th>
                   <th className="px-4 py-3">CNAE</th>
-                  <th className="px-4 py-3">Sincronização</th>
+                  <th className="px-4 py-3">Capturado em</th>
                   {ehAdmin && <th className="px-4 py-3" aria-label="Ações" />}
                 </tr>
               </thead>
               <tbody>
-                {leads.length === 0 ? (
+                {leadsFiltrados.length === 0 ? (
                   <tr>
                     <td colSpan={ehAdmin ? 6 : 5} className="px-4 py-8 text-center text-gray-400 italic">
-                      Nenhuma empresa enriquecida ainda. Cole os CNPJs ao lado para iniciar.
+                      {leads.length === 0
+                        ? 'Nenhuma empresa enriquecida ainda. Cole os CNPJs ao lado para iniciar.'
+                        : 'Nenhuma empresa encontrada para essa busca.'}
                     </td>
                   </tr>
                 ) : (
-                  leads.map((lead) => (
+                  leadsFiltrados.map((lead) => (
                     <tr key={lead.id_empresa ?? lead.cnpj} className="border-b hover:bg-gray-50">
                       <td className="px-4 py-4 text-gray-500 whitespace-nowrap">{formatarCnpj(lead.cnpj)}</td>
                       <td className="px-4 py-4 font-medium text-blue-900">{lead.razao_social}</td>
                       <td className="px-4 py-4 text-gray-600">{lead.endereco}</td>
                       <td className="px-4 py-4 text-gray-600">{lead.cnae}</td>
-                      <td className="px-4 py-4">
-                        <span className="text-blue-600 font-medium text-xs bg-blue-50 px-2 py-1 rounded whitespace-nowrap">
-                          {lead.status_sincronizacao || 'Pronto HubSpot'}
-                        </span>
-                      </td>
+                      <td className="px-4 py-4 text-gray-600 whitespace-nowrap">{dataLocal(lead.criado_em)}</td>
                       {ehAdmin && (
                         <td className="px-4 py-4 text-right">
                           <button

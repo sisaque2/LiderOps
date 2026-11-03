@@ -2,7 +2,7 @@
 
 ## 📌 Visão do Produto
 
-O **LiderOps** é um hub web de Revenue Operations e pré-vendas B2B feito para a Liderkraft Embalagens (papelão ondulado e papelão acoplado ao offset). Ele centraliza a rotina do time comercial: garimpar empresas dentro do ICP, enriquecer CNPJs em lote, exportar a base pronta para o HubSpot, gerar e-mails de prospecção com IA e acompanhar as tarefas do dia em um kanban.
+O **LiderOps** é um hub web de Revenue Operations e pré-vendas B2B feito para a Liderkraft Embalagens (papelão ondulado e papelão acoplado ao offset). Ele centraliza a rotina do time comercial: garimpar empresas dentro do ICP, enriquecer CNPJs em lote, exportar a base higienizada em planilha .xlsx, gerar e-mails de prospecção com IA e acompanhar as tarefas do dia em um kanban.
 
 ## 🎯 Público-Alvo
 
@@ -18,7 +18,7 @@ LDRs, SDRs, vendedores e analistas de RevOps que precisam de dados cadastrais co
 | RF04 | Gerar E-mail | E-mails B2B com Google Gemini, assinados pelo usuário logado |
 | RF05 | Tarefas | Kanban Aguardando → Em andamento → Concluídas |
 
-Detalhes em [`docs/rf.md`](docs/rf.md).
+Detalhes em [`docs/rf.md`](docs/rf.md). Protótipo de interface no [Figma](https://www.figma.com/proto/tcWaP4FhD3sBwlDNuPu5Wq/LiderOps?node-id=211-443&p=f&t=QDjjNqRtODtXfowo-1&scaling=scale-down&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=211%3A443&show-proto-sidebar=1).
 
 ## ⚙️ Arquitetura e Tecnologias
 

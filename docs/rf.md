@@ -12,7 +12,7 @@ Todo cadastro feito pela tela cria um usuário comum. O primeiro administrador �
 O sistema deve buscar empresas na base bruta da Receita Federal filtrando pelo Perfil de Cliente Ideal (UF, município atendido, CNAE, porte e capital social mínimo), devolvendo até 50 CNPJs por consulta.
 
 ### RF03 - Enriquecimento em Lote e Exportação
-O sistema deve validar e enriquecer até 50 CNPJs por vez via Brasil API (razão social, endereço e CNAE), salvar o resultado no banco e permitir exportar a base higienizada em planilha **.xlsx** pronta para importação no HubSpot.
+O sistema deve validar e enriquecer até 50 CNPJs por vez via Brasil API (razão social, endereço e CNAE), salvar o resultado no banco e permitir exportar a base higienizada em planilha **.xlsx**.
 
 ### RF04 - Gerador de E-mail com IA
 O sistema deve gerar e-mails comerciais B2B com IA (Google Gemini) a partir de um briefing do prospecto (empresa, contato, produto, objetivo e tom), assinados com os dados do usuário logado, e permitir transformar o e-mail enviado em uma tarefa de follow-up.

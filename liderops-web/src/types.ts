@@ -16,6 +16,7 @@ export interface LeadEmpresa {
   endereco: string;
   cnae: string;
   status_sincronizacao?: string;
+  criado_em?: string;
 }
 
 export type StatusTarefa = 'aguardando' | 'em_andamento' | 'concluida';

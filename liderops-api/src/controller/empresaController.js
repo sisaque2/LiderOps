@@ -43,7 +43,7 @@ module.exports = {
                     razao_social: razaoSocial,
                     endereco,
                     cnae,
-                    status_sincronizacao: 'Pronto HubSpot'
+                    status_sincronizacao: 'Enriquecida'
                 }
             });
         } catch (error) {
@@ -78,7 +78,7 @@ module.exports = {
                     razao_social.trim(),
                     endereco || 'Não informado',
                     cnae || 'Não informado',
-                    status_sincronizacao || 'Pronto HubSpot'
+                    status_sincronizacao || 'Enriquecida'
                 ]
             );
 
@@ -150,7 +150,7 @@ module.exports = {
                     razao_social.trim(),
                     endereco || 'Não informado',
                     cnae || 'Não informado',
-                    status_sincronizacao || 'Pronto HubSpot',
+                    status_sincronizacao || 'Enriquecida',
                     id
                 ]
             );
@@ -268,7 +268,7 @@ module.exports = {
 
                 await db.query(
                     `INSERT INTO empresas_prospectadas (cnpj, razao_social, endereco, cnae, status_sincronizacao)
-                     VALUES (?, ?, ?, ?, 'Pronto HubSpot')
+                     VALUES (?, ?, ?, ?, 'Enriquecida')
                      ON DUPLICATE KEY UPDATE
                         razao_social = VALUES(razao_social),
                         endereco = VALUES(endereco),
@@ -281,7 +281,7 @@ module.exports = {
                     razao_social: razaoSocial,
                     endereco,
                     cnae,
-                    status_sincronizacao: 'Pronto HubSpot'
+                    status_sincronizacao: 'Enriquecida'
                 });
             } catch (error) {
                 falhas.push({ cnpj, motivo: motivoFalhaBrasilApi(error) });
@@ -321,7 +321,7 @@ module.exports = {
                 { header: 'Razão Social', key: 'razao_social', width: 42 },
                 { header: 'Endereço Principal', key: 'endereco', width: 48 },
                 { header: 'CNAE', key: 'cnae', width: 16 },
-                { header: 'Status HubSpot', key: 'status_sincronizacao', width: 20 },
+                { header: 'Status', key: 'status_sincronizacao', width: 16 },
                 { header: 'Data de Captura', key: 'criado_em', width: 22 }
             ];
 
