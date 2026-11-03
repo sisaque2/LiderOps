@@ -1,14 +1,14 @@
 {
   "name": "liderops-api",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.1.0",
+  "description": "API REST do LiderOps: autenticação, garimpo por ICP, enriquecimento de CNPJ, IA e tarefas",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Equipe LiderOps - UNIFEOB",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
@@ -21,5 +21,8 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.24.4"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

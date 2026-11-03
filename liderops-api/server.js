@@ -9,13 +9,23 @@ const empresaRoutes = require('./src/routes/empresaRoutes');
 const iaRoutes = require('./src/routes/iaRoutes');
 const tarefaRoutes = require('./src/routes/tarefaRoutes');
 const inicializarBanco = require('./src/config/initDb');
+const db = require('./src/config/db');
+const { version } = require('./package.json');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.get('/api/status', (req, res) => {
-    res.json({ mensagem: 'API LiderOps rodando com sucesso!' });
+// Health check: usado no monitoramento da EC2 e pelo indicador "API online" do front
+app.get('/api/status', async (req, res) => {
+    const base = { versao: version, uptime_segundos: Math.round(process.uptime()) };
+    const inicio = Date.now();
+    try {
+        await db.query('SELECT 1');
+        res.json({ status: 'online', ...base, banco: { conectado: true, latencia_ms: Date.now() - inicio } });
+    } catch (error) {
+        res.status(503).json({ status: 'degradado', ...base, banco: { conectado: false, erro: error.message } });
+    }
 });
 
 app.use('/api/usuarios', userRoutes);
