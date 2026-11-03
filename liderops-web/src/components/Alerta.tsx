@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 export type TipoAlerta = 'sucesso' | 'erro' | 'info';
 
 export interface MensagemAlerta {
@@ -16,7 +18,22 @@ const ESTILOS: Record<TipoAlerta, string> = {
   info: 'bg-slate-50 border-slate-300 text-slate-700',
 };
 
+const TEMPO_SUCESSO_MS = 4500;
+
 export default function Alerta({ alerta, onFechar }: AlertaProps) {
+  const fecharRef = useRef(onFechar);
+
+  useEffect(() => {
+    fecharRef.current = onFechar;
+  });
+
+  // Avisos de sucesso somem sozinhos; erros e informações ficam até o usuário fechar
+  useEffect(() => {
+    if (alerta?.tipo !== 'sucesso') return;
+    const timer = setTimeout(() => fecharRef.current?.(), TEMPO_SUCESSO_MS);
+    return () => clearTimeout(timer);
+  }, [alerta]);
+
   if (!alerta) return null;
 
   return (

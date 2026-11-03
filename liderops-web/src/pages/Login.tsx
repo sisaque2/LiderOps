@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import Alerta, { type MensagemAlerta } from '../components/Alerta';
+import CampoSenha from '../components/CampoSenha';
+import Logo from '../components/Logo';
 import { apiFetch, mensagemDeErro, sessao } from '../config/api';
 import type { RespostaSessao, Usuario } from '../types';
 
@@ -88,7 +90,9 @@ export default function Login({ onLogin, avisoInicial }: LoginProps) {
     <div className="flex min-h-screen">
       {/* Coluna Esquerda - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-[#0f172a] flex-col justify-center items-center text-white px-12 text-center">
-        <div className="mb-8 text-6xl">⚙️ LiderOps</div>
+        <div className="mb-8 flex items-center gap-4 text-6xl font-bold">
+          <Logo tamanho={72} className="ring-1 ring-white/20 rounded-2xl" /> LiderOps
+        </div>
         <h1 className="text-4xl font-bold mb-4 text-green-500">
           {modo === 'entrar' ? 'Bem-vindo de volta' : 'Crie sua conta'}
         </h1>
@@ -175,14 +179,14 @@ export default function Login({ onLogin, avisoInicial }: LoginProps) {
 
             <div>
               <label htmlFor="senha" className="block text-sm font-medium text-gray-700 mb-2">Senha</label>
-              <input
+              <CampoSenha
                 id="senha"
-                type="password"
                 autoComplete={modo === 'entrar' ? 'current-password' : 'new-password'}
                 value={senha}
-                onChange={(e) => setSenha(e.target.value)}
+                onChange={setSenha}
                 placeholder="••••••••••••"
                 className={`${inputClasse} ${bordaCampo('senha')}`}
+                mostrarForca={modo === 'cadastrar'}
               />
               {campoErro('senha')}
             </div>
@@ -190,12 +194,11 @@ export default function Login({ onLogin, avisoInicial }: LoginProps) {
             {modo === 'cadastrar' && (
               <div>
                 <label htmlFor="confirmarSenha" className="block text-sm font-medium text-gray-700 mb-2">Confirmar senha</label>
-                <input
+                <CampoSenha
                   id="confirmarSenha"
-                  type="password"
                   autoComplete="new-password"
                   value={confirmarSenha}
-                  onChange={(e) => setConfirmarSenha(e.target.value)}
+                  onChange={setConfirmarSenha}
                   placeholder="••••••••••••"
                   className={`${inputClasse} ${bordaCampo('confirmarSenha')}`}
                 />

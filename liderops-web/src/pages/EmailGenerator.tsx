@@ -101,6 +101,8 @@ export default function EmailGenerator({ usuario }: EmailGeneratorProps) {
   };
 
   const textoCompleto = email ? `Assunto: ${email.assunto}\n\n${email.corpo}` : '';
+  const palavras = email ? email.corpo.trim().split(/\s+/).filter(Boolean).length : 0;
+  const tamanhoIdeal = palavras >= 80 && palavras <= 140;
 
   const handleCopiar = async () => {
     try {
@@ -241,6 +243,9 @@ export default function EmailGenerator({ usuario }: EmailGeneratorProps) {
             </div>
             <div className="whitespace-pre-wrap text-gray-100 text-sm leading-relaxed bg-white/5 rounded p-4 flex-1">
               {email.corpo}
+            </div>
+            <div className={`mt-2 text-xs ${tamanhoIdeal ? 'text-green-400' : 'text-amber-300'}`}>
+              {palavras} palavras {tamanhoIdeal ? '· tamanho ideal' : '· o ideal é entre 80 e 140'}
             </div>
 
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">

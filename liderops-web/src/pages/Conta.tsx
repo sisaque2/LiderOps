@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import Alerta, { type MensagemAlerta } from '../components/Alerta';
+import CampoSenha from '../components/CampoSenha';
 import { apiFetch, mensagemDeErro } from '../config/api';
 import type { Usuario } from '../types';
 
@@ -66,15 +67,15 @@ export default function Conta({ usuario }: ContaProps) {
         <Alerta alerta={alerta} onFechar={() => setAlerta(null)} />
         <div>
           <label htmlFor="senhaAtual" className="block text-sm font-medium text-gray-700 mb-1">Senha atual</label>
-          <input id="senhaAtual" type="password" autoComplete="current-password" value={senhaAtual} onChange={(e) => setSenhaAtual(e.target.value)} className={inputClasse} />
+          <CampoSenha id="senhaAtual" autoComplete="current-password" value={senhaAtual} onChange={setSenhaAtual} className={inputClasse} />
         </div>
         <div>
           <label htmlFor="novaSenha" className="block text-sm font-medium text-gray-700 mb-1">Nova senha</label>
-          <input id="novaSenha" type="password" autoComplete="new-password" value={novaSenha} onChange={(e) => setNovaSenha(e.target.value)} className={inputClasse} />
+          <CampoSenha id="novaSenha" autoComplete="new-password" value={novaSenha} onChange={setNovaSenha} className={inputClasse} mostrarForca />
         </div>
         <div>
           <label htmlFor="confirmarNova" className="block text-sm font-medium text-gray-700 mb-1">Confirmar nova senha</label>
-          <input id="confirmarNova" type="password" autoComplete="new-password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} className={inputClasse} />
+          <CampoSenha id="confirmarNova" autoComplete="new-password" value={confirmar} onChange={setConfirmar} className={inputClasse} />
         </div>
         <button
           type="submit"

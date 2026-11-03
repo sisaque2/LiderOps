@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Alerta, { type MensagemAlerta } from '../components/Alerta';
+import { useConfirmacao } from '../hooks/useConfirmacao';
 import { apiFetch, mensagemDeErro } from '../config/api';
 import type { Perfil, Usuario } from '../types';
 
@@ -13,6 +14,7 @@ export default function Usuarios({ usuario }: UsuariosProps) {
   const [carregando, setCarregando] = useState(true);
   const [alerta, setAlerta] = useState<MensagemAlerta | null>(null);
   const [resetandoId, setResetandoId] = useState<number | null>(null);
+  const { confirmar, dialogo } = useConfirmacao();
   const [novaSenha, setNovaSenha] = useState('');
 
   useEffect(() => {
@@ -55,7 +57,8 @@ export default function Usuarios({ usuario }: UsuariosProps) {
   };
 
   const excluir = async (alvo: Usuario) => {
-    if (!window.confirm(`Excluir a conta de ${alvo.nome}? As tarefas dessa pessoa também serão removidas.`)) return;
+    const ok = await confirmar('Excluir usuário', `A conta de ${alvo.nome} e as tarefas dessa pessoa serão removidas.`);
+    if (!ok) return;
     try {
       await apiFetch(`/usuarios/${alvo.id_usuario}`, { method: 'DELETE' });
       setUsuarios((lista) => lista.filter((u) => u.id_usuario !== alvo.id_usuario));
@@ -67,6 +70,7 @@ export default function Usuarios({ usuario }: UsuariosProps) {
 
   return (
     <div className="space-y-6">
+      {dialogo}
       <div className="bg-[#0f172a] text-white p-6 rounded-lg shadow">
         <span className="bg-green-500 text-xs font-bold px-2 py-1 rounded text-white mb-3 inline-block">ADMINISTRAÇÃO</span>
         <h2 className="text-xl font-bold">Usuários e Permissões</h2>

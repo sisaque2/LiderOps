@@ -1,5 +1,6 @@
 import { useEffect, useState, type DragEvent, type FormEvent } from 'react';
 import Alerta, { type MensagemAlerta } from '../components/Alerta';
+import { useConfirmacao } from '../hooks/useConfirmacao';
 import { apiFetch, mensagemDeErro } from '../config/api';
 import type { Prioridade, StatusTarefa, Tarefa } from '../types';
 
@@ -40,6 +41,7 @@ export default function Tarefas() {
   const [carregando, setCarregando] = useState(true);
   const [mostrarOcultas, setMostrarOcultas] = useState(false);
   const [alerta, setAlerta] = useState<MensagemAlerta | null>(null);
+  const { confirmar, dialogo } = useConfirmacao();
 
   const [formAberto, setFormAberto] = useState(false);
   const [editandoId, setEditandoId] = useState<number | null>(null);
@@ -144,7 +146,8 @@ export default function Tarefas() {
   };
 
   const excluir = async (tarefa: Tarefa) => {
-    if (!window.confirm(`Excluir a tarefa "${tarefa.titulo}"? Essa ação não pode ser desfeita.`)) return;
+    const ok = await confirmar('Excluir tarefa', `"${tarefa.titulo}" será excluída. Essa ação não pode ser desfeita.`);
+    if (!ok) return;
     try {
       await apiFetch(`/tarefas/${tarefa.id_tarefa}`, { method: 'DELETE' });
       setTarefas((lista) => lista.filter((t) => t.id_tarefa !== tarefa.id_tarefa));
@@ -174,6 +177,7 @@ export default function Tarefas() {
 
   return (
     <div className="space-y-6">
+      {dialogo}
       <div className="bg-[#0f172a] text-white p-6 rounded-lg shadow flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold">Pipeline de Tarefas</h2>
@@ -309,7 +313,9 @@ export default function Tarefas() {
                 )}
 
                 {cards.map((t) => {
-                  const atrasada = t.prazo && t.prazo < hoje && t.status !== 'concluida';
+                  const pendente = t.status !== 'concluida';
+                  const atrasada = pendente && t.prazo && t.prazo < hoje;
+                  const venceHoje = pendente && t.prazo === hoje;
                   return (
                     <article
                       key={t.id_tarefa}
@@ -332,8 +338,13 @@ export default function Tarefas() {
                       {t.descricao && <p className="text-xs text-gray-600 mt-1 line-clamp-3 whitespace-pre-line">{t.descricao}</p>}
 
                       {t.prazo && (
-                        <p className={`text-xs mt-2 ${atrasada ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
-                          📅 {formatarPrazo(t.prazo)}{atrasada ? ' · atrasada' : ''}
+                        <p
+                          className={`text-xs mt-2 ${
+                            atrasada ? 'text-red-600 font-semibold' : venceHoje ? 'text-amber-600 font-semibold' : 'text-gray-500'
+                          }`}
+                        >
+                          📅 {formatarPrazo(t.prazo)}
+                          {atrasada ? ' · atrasada' : venceHoje ? ' · vence hoje' : ''}
                         </p>
                       )}
 
