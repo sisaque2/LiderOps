@@ -1,6 +1,6 @@
+import Logo from './Logo';
+import type { Tela } from '../config/telas';
 import type { Usuario } from '../types';
-
-export type Tela = 'leads' | 'emails' | 'tarefas' | 'usuarios' | 'conta';
 
 interface HeaderProps {
   usuario: Usuario;
@@ -23,7 +23,7 @@ export default function Header({ usuario, telaAtiva, onNavigate, onLogout }: Hea
   return (
     <header className="bg-[#0f172a] text-white px-6 py-4 flex flex-wrap items-center justify-between gap-4">
       <div className="flex items-center gap-2 font-bold text-xl cursor-pointer" onClick={() => onNavigate('leads')}>
-        <span className="text-green-500">⚙️</span> LiderOps
+        <Logo tamanho={30} className="ring-1 ring-white/20 rounded-[7px]" /> LiderOps
       </div>
 
       <nav className="flex flex-wrap gap-2 sm:gap-4">
