@@ -1,6 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const db = require('../config/db');
 const User = require('../models/User');
+const EmailGerado = require('../models/emailGerado');
 
 const PRODUTOS = {
     ondulado: 'caixas de papelão ondulado (onda simples e dupla) para transporte e armazenagem',
@@ -147,9 +148,18 @@ ${String(contexto).trim()}
             const resultado = await model.generateContent(prompt);
             const email = interpretarResposta(resultado.response.text());
 
+            const historico = await EmailGerado.salvar(req.user.id, {
+                empresa: (nomeEmpresa?.trim() || empresa?.razao_social || 'Empresa').slice(0, 255),
+                objetivo,
+                produto,
+                assunto: email.assunto.slice(0, 255),
+                corpo: email.corpo
+            });
+
             return res.status(200).json({
                 mensagem: 'E-mail gerado com sucesso pela IA!',
                 email,
+                historico,
                 remetente: { nome: vendedor.nome, cargo: vendedor.cargo, email: vendedor.email }
             });
         } catch (error) {
@@ -158,6 +168,33 @@ ${String(contexto).trim()}
                 mensagem: 'A IA não respondeu agora. Tente novamente em alguns segundos.',
                 detalhes: error.message
             });
+        }
+    },
+
+    // HISTÓRICO DO USUÁRIO (GET /api/ia/emails) — últimos 20 e-mails gerados
+    async listarHistorico(req, res) {
+        try {
+            const emails = await EmailGerado.listarDoUsuario(req.user.id);
+            return res.status(200).json(emails);
+        } catch (error) {
+            return res.status(500).json({ erro: 'Erro ao buscar o histórico de e-mails.', detalhes: error.message });
+        }
+    },
+
+    // DELETE /api/ia/emails/:id — só remove e-mails do próprio usuário
+    async excluirDoHistorico(req, res) {
+        const id = Number(req.params.id);
+        if (!Number.isInteger(id) || id <= 0) {
+            return res.status(400).json({ erro: 'Parâmetro inválido', mensagem: 'ID de e-mail inválido.' });
+        }
+        try {
+            const removidos = await EmailGerado.excluir(id, req.user.id);
+            if (removidos === 0) {
+                return res.status(404).json({ erro: 'Não encontrado', mensagem: 'E-mail não encontrado no seu histórico.' });
+            }
+            return res.status(200).json({ mensagem: 'E-mail removido do histórico.' });
+        } catch (error) {
+            return res.status(500).json({ erro: 'Erro ao remover o e-mail.', detalhes: error.message });
         }
     }
 };
