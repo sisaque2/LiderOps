@@ -3,7 +3,7 @@ export const TELAS = {
   leads: 'Higienizar Dados',
   emails: 'Gerar E-mail',
   tarefas: 'Tarefas',
-  usuarios: 'Usuários',
+  usuarios: 'Administração',
   conta: 'Minha conta',
 } as const;
 

@@ -2,6 +2,7 @@ const axios = require('axios');
 const db = require('../config/db');
 const Empresa = require('../models/empresa');
 const { processarArquivoReceita } = require('../services/receitaService');
+const fs = require('fs/promises');
 const ExcelJS = require('exceljs');
 
 // Função utilitária que cria um "freio" (delay em milissegundos) usando Promises
@@ -226,26 +227,49 @@ module.exports = {
     },
 
     // IMPORTAÇÃO VIA STREAM (POST /api/empresas/importar-receita)
+    // IMPORTAÇÃO VIA UPLOAD (POST /api/empresas/importar-receita, multipart com o campo "arquivo")
+    // Com substituir=true, empresas que não vieram neste arquivo saem da base (carga mensal completa)
     async importarBaseReceita(req, res) {
-        const { caminhoArquivo } = req.body;
-        if (!caminhoArquivo) {
-            return res.status(400).json({
-                erro: 'Parâmetro obrigatório',
-                mensagem: 'Informe o "caminhoArquivo" do CSV a ser processado.'
+        if (!req.file) {
+            return res.status(422).json({
+                erro: 'Arquivo obrigatório',
+                mensagem: 'Envie o CSV tratado da Receita no campo "arquivo".'
             });
         }
 
+        const substituir = req.body.substituir === 'true';
         try {
-            const resultado = await processarArquivoReceita(caminhoArquivo);
+            const [[{ inicio }]] = await db.query('SELECT NOW() AS inicio');
+            const resultado = await processarArquivoReceita(req.file.path);
+
+            // Só remove quando o arquivo trouxe empresas válidas, para um CSV errado não esvaziar a base
+            let removidas = 0;
+            if (substituir && resultado.totalAprovadas > 0) {
+                removidas = await Empresa.removerNaoImportadasDesde(inicio);
+            }
+
             return res.status(200).json({
-                mensagem: 'Processamento via Stream concluído com sucesso!',
-                estatisticas: resultado
+                mensagem: 'Base da Receita importada com sucesso!',
+                estatisticas: { ...resultado, removidas }
             });
         } catch (error) {
             return res.status(500).json({
                 erro: 'Falha ao processar arquivo da Receita Federal.',
+                mensagem: 'Não foi possível processar o arquivo. Confira se é o CSV gerado pelo script de tratamento.',
                 detalhes: error.message
             });
+        } finally {
+            await fs.unlink(req.file.path).catch(() => {});
+        }
+    },
+
+    // RESUMO DA BASE BRUTA (GET /api/empresas/receita/resumo) — admin
+    async resumoBaseReceita(req, res) {
+        try {
+            const resumo = await Empresa.resumoBaseBruta();
+            return res.status(200).json(resumo);
+        } catch (error) {
+            return res.status(500).json({ erro: 'Erro ao gerar o resumo da base.', detalhes: error.message });
         }
     },
 
@@ -304,12 +328,29 @@ module.exports = {
             erros: falhas
         });
     },
-    // EXPORTAÇÃO PARA EXCEL FORMATADO (GET /api/empresas/exportar)
+    // EXPORTAÇÃO PARA EXCEL FORMATADO
+    // GET /api/empresas/exportar -> base inteira | POST /api/empresas/exportar { ids: [...] } -> só as selecionadas
     async exportarEmpresasExcel(req, res) {
+        const ids = req.method === 'POST' ? req.body.ids : undefined;
+        if (ids !== undefined) {
+            const validos = Array.isArray(ids) && ids.length > 0 && ids.length <= 5000
+                && ids.every(id => Number.isInteger(id) && id > 0);
+            if (!validos) {
+                return res.status(422).json({
+                    erro: 'Validação falhou',
+                    mensagem: 'Envie em "ids" uma lista de 1 a 5000 IDs de empresas.'
+                });
+            }
+        }
+
         try {
-            const [empresas] = await db.query(
-                'SELECT cnpj, razao_social, endereco, cnae, status_sincronizacao, criado_em FROM empresas_prospectadas ORDER BY criado_em DESC'
-            );
+            const colunas = 'cnpj, razao_social, endereco, cnae, status_sincronizacao, criado_em';
+            const [empresas] = ids
+                ? await db.query(
+                    `SELECT ${colunas} FROM empresas_prospectadas WHERE id_empresa IN (?) ORDER BY criado_em DESC`,
+                    [ids]
+                )
+                : await db.query(`SELECT ${colunas} FROM empresas_prospectadas ORDER BY criado_em DESC`);
 
             // 1. Cria um novo arquivo Excel em memória e adiciona uma aba
             const workbook = new ExcelJS.Workbook();

@@ -46,7 +46,10 @@ export class ApiError extends Error {
 async function requisitar(caminho: string, opcoes: RequestInit = {}): Promise<Response> {
   const token = sessao.getToken();
   const headers = new Headers(opcoes.headers);
-  if (opcoes.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+  // FormData (upload) precisa que o navegador monte o Content-Type com o boundary do multipart
+  if (opcoes.body && !(opcoes.body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
   if (token) headers.set('Authorization', `Bearer ${token}`);
 
   let resposta: Response;
@@ -82,8 +85,8 @@ export async function apiFetch<T>(caminho: string, opcoes: RequestInit = {}): Pr
 }
 
 // Download de arquivo com o token no header (window.open não conseguiria enviar o Authorization)
-export async function apiDownload(caminho: string, nomeArquivo: string): Promise<void> {
-  const resposta = await requisitar(caminho);
+export async function apiDownload(caminho: string, nomeArquivo: string, opcoes: RequestInit = {}): Promise<void> {
+  const resposta = await requisitar(caminho, opcoes);
   const blob = await resposta.blob();
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

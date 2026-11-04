@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import Alerta, { type MensagemAlerta } from '../components/Alerta';
 import { useConfirmacao } from '../hooks/useConfirmacao';
+import ConviteCadastro from '../components/admin/ConviteCadastro';
+import BaseReceita from '../components/admin/BaseReceita';
 import { apiFetch, mensagemDeErro } from '../config/api';
 import type { Perfil, Usuario } from '../types';
 
@@ -8,7 +10,7 @@ interface UsuariosProps {
   usuario: Usuario;
 }
 
-// Tela exclusiva do admin: lista usuários, altera perfil e exclui contas
+// Tela exclusiva do admin: código de convite, carga da base da Receita e gestão de usuários
 export default function Usuarios({ usuario }: UsuariosProps) {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -73,13 +75,19 @@ export default function Usuarios({ usuario }: UsuariosProps) {
       {dialogo}
       <div className="bg-[#0f172a] text-white p-6 rounded-lg shadow">
         <span className="bg-green-500 text-xs font-bold px-2 py-1 rounded text-white mb-3 inline-block">ADMINISTRAÇÃO</span>
-        <h2 className="text-xl font-bold">Usuários e Permissões</h2>
-        <p className="text-sm text-gray-300">Administradores gerenciam contas, excluem empresas da base e importam a base da Receita.</p>
+        <h2 className="text-xl font-bold">Administração</h2>
+        <p className="text-sm text-gray-300">Controle quem pode se cadastrar, mantenha a base de garimpo atualizada e gerencie os acessos.</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ConviteCadastro />
+        <BaseReceita />
       </div>
 
       <Alerta alerta={alerta} onFechar={() => setAlerta(null)} />
 
       <div className="bg-white p-6 rounded-lg shadow border border-gray-100 overflow-x-auto">
+        <h3 className="font-bold text-gray-800 mb-4">Usuários e permissões</h3>
         <table className="w-full text-sm text-left">
           <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b">
             <tr>

@@ -27,6 +27,8 @@ async function processarArquivoReceita(caminhoArquivo) {
     let loteAtual = [];
     let totalLidas = 0;
     let totalAprovadas = 0;
+    let novas = 0;
+    let atualizadas = 0;
 
     // 3. Loop assíncrono sobre a Stream (Backpressure controlado)
     for await (const linha of leitorLinhas) {
@@ -89,19 +91,23 @@ async function processarArquivoReceita(caminhoArquivo) {
 
         // 4. Quando o balde atinge 1.000 empresas, pausa a leitura do disco e grava no MySQL
         if (loteAtual.length >= TAMANHO_LOTE) {
-            const inseridas = await Empresa.inserirLoteBruto(loteAtual);
-            totalAprovadas += inseridas;
+            const salvas = await Empresa.salvarLoteBruto(loteAtual);
+            totalAprovadas += loteAtual.length;
+            novas += salvas.novas;
+            atualizadas += salvas.atualizadas;
             loteAtual = []; // Esvazia o balde na RAM
         }
     }
 
     // 5. Grava o restante que sobrou no balde (menos de 1.000 no final do arquivo)
     if (loteAtual.length > 0) {
-        const inseridas = await Empresa.inserirLoteBruto(loteAtual);
-        totalAprovadas += inseridas;
+        const salvas = await Empresa.salvarLoteBruto(loteAtual);
+        totalAprovadas += loteAtual.length;
+        novas += salvas.novas;
+        atualizadas += salvas.atualizadas;
     }
 
-    return { totalLidas, totalAprovadas };
+    return { totalLidas, totalAprovadas, novas, atualizadas };
 }
 
 module.exports = { processarArquivoReceita };

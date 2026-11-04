@@ -13,7 +13,7 @@ const NAV_ITEMS: { id: Tela; label: string; somenteAdmin?: boolean }[] = [
   { id: 'leads', label: 'Higienizar Dados' },
   { id: 'emails', label: 'Gerar E-mail' },
   { id: 'tarefas', label: 'Tarefas' },
-  { id: 'usuarios', label: 'Usuários', somenteAdmin: true },
+  { id: 'usuarios', label: 'Administração', somenteAdmin: true },
 ];
 
 export default function Header({ usuario, telaAtiva, onNavigate, onLogout }: HeaderProps) {
