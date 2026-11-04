@@ -1,7 +1,9 @@
 const db = require('./db');
 const User = require('../models/User');
 const Empresa = require('../models/empresa');
+const Configuracao = require('../models/configuracao');
 const { linhasSeedReceita } = require('./seedReceita');
+const { gerarCodigoConvite } = require('../helpers/codigo-convite');
 
 // Colunas esperadas em cada tabela. Usadas para atualizar bancos criados por versões antigas do projeto.
 // As definições aceitam nulo ou têm default para poderem ser adicionadas em tabelas que já têm linhas.
@@ -69,6 +71,14 @@ async function atualizarEstrutura(tabela, esperadas) {
         await db.query(`ALTER TABLE \`${tabela}\` MODIFY \`${c.COLUMN_NAME}\` ${c.COLUMN_TYPE} NULL`);
         console.log(`🔧 Coluna antiga ${tabela}.${c.COLUMN_NAME} agora aceita valor vazio.`);
     }
+}
+
+// Código exigido no cadastro público; o admin troca pela tela de Administração
+async function garantirCodigoConvite() {
+    if (await Configuracao.obter('codigo_convite')) return;
+    const codigo = (process.env.CODIGO_CONVITE || gerarCodigoConvite()).trim().toUpperCase();
+    await Configuracao.definir('codigo_convite', codigo);
+    console.log(`🔑 Código de convite inicial: ${codigo}`);
 }
 
 // Cria o primeiro administrador quando o banco ainda não tem nenhum (dados vêm do .env)
@@ -170,10 +180,38 @@ async function inicializarBanco() {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);
 
-        // 6. Seeds idempotentes
+        // 6. Configurações gerais (chave/valor) e histórico de e-mails da IA
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS configuracoes (
+                chave VARCHAR(50) PRIMARY KEY,
+                valor VARCHAR(255) NOT NULL,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS emails_gerados (
+                id_email INT AUTO_INCREMENT PRIMARY KEY,
+                id_usuario ${tipoIdUsuario} NOT NULL,
+                empresa VARCHAR(255) NOT NULL,
+                objetivo VARCHAR(30) NOT NULL,
+                produto VARCHAR(20) NOT NULL,
+                assunto VARCHAR(255) NOT NULL,
+                corpo TEXT NOT NULL,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_emails_usuario (id_usuario, criado_em),
+                CONSTRAINT fk_emails_usuario FOREIGN KEY (id_usuario)
+                    REFERENCES usuarios (id_usuario) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+
+        // 7. Seeds idempotentes. A base de exemplo da Receita só entra quando a tabela está vazia,
+        //    para não voltar depois que a base real for carregada
         await garantirAdminPadrao();
-        const inseridas = await Empresa.inserirLoteBruto(linhasSeedReceita());
-        if (inseridas > 0) console.log(`🌱 Seed da Receita: ${inseridas} empresas inseridas.`);
+        await garantirCodigoConvite();
+        if ((await Empresa.contarBaseBruta()) === 0) {
+            const { novas } = await Empresa.salvarLoteBruto(linhasSeedReceita());
+            console.log(`🌱 Seed da Receita: ${novas} empresas inseridas.`);
+        }
 
         console.log('✅ Estrutura do banco de dados verificada e pronta!');
     } catch (error) {

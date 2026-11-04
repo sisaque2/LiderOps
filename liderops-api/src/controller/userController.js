@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const createUserToken = require('../helpers/create-user-token');
+const Configuracao = require('../models/configuracao');
+const { normalizarCodigo } = require('../helpers/codigo-convite');
 
 const erroInterno = (res, mensagem, error) =>
     res.status(500).json({ erro: mensagem, detalhes: error.message });
@@ -7,8 +9,16 @@ const erroInterno = (res, mensagem, error) =>
 module.exports = {
     // CADASTRO PÚBLICO (POST /api/usuarios) — sempre cria perfil "comum" e já devolve a sessão
     async register(req, res) {
-        const { nome, email, senha, cargo } = req.body;
+        const { nome, email, senha, cargo, codigoConvite } = req.body;
         try {
+            const codigoValido = await Configuracao.obter('codigo_convite');
+            if (!codigoValido || normalizarCodigo(codigoConvite) !== codigoValido) {
+                return res.status(403).json({
+                    erro: 'Código de convite inválido',
+                    mensagem: 'Código de convite inválido. Peça o código atual a um administrador.'
+                });
+            }
+
             const usuario = await User.create({ nome, email, senha, cargo, perfil: 'comum' });
             return res.status(201).json({
                 mensagem: 'Conta criada com sucesso!',

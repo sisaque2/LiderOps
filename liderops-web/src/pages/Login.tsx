@@ -25,6 +25,7 @@ export default function Login({ onLogin, avisoInicial }: LoginProps) {
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [cargo, setCargo] = useState('');
+  const [codigoConvite, setCodigoConvite] = useState('');
   const [erros, setErros] = useState<Record<string, string>>({});
   const [alerta, setAlerta] = useState<MensagemAlerta | null>(
     avisoInicial ? { tipo: 'info', texto: avisoInicial } : null
@@ -46,6 +47,7 @@ export default function Login({ onLogin, avisoInicial }: LoginProps) {
     if (modo === 'cadastrar') {
       if (nome.trim().length < 3) novos.nome = 'O nome deve ter pelo menos 3 caracteres.';
       if (!cargo) novos.cargo = 'Selecione o seu cargo.';
+      if (!codigoConvite.trim()) novos.codigoConvite = 'Informe o código de convite.';
       if (senha.length < 6) novos.senha = 'A senha deve ter pelo menos 6 caracteres.';
       if (senha !== confirmarSenha) novos.confirmarSenha = 'As senhas não conferem.';
     }
@@ -69,7 +71,7 @@ export default function Login({ onLogin, avisoInicial }: LoginProps) {
             })
           : await apiFetch<RespostaSessao>('/usuarios', {
               method: 'POST',
-              body: JSON.stringify({ nome, email, senha, cargo }),
+              body: JSON.stringify({ nome, email, senha, cargo, codigoConvite }),
             });
 
       sessao.salvar(resposta.token, resposta.usuario);
@@ -160,6 +162,20 @@ export default function Login({ onLogin, avisoInicial }: LoginProps) {
                   </select>
                   {campoErro('cargo')}
                 </div>
+                <div>
+                  <label htmlFor="codigoConvite" className="block text-sm font-medium text-gray-700 mb-2">Código de convite</label>
+                  <input
+                    id="codigoConvite"
+                    type="text"
+                    autoComplete="off"
+                    maxLength={8}
+                    value={codigoConvite}
+                    onChange={(e) => setCodigoConvite(e.target.value.toUpperCase())}
+                    placeholder="Fornecido pelo administrador"
+                    className={`${inputClasse} ${bordaCampo('codigoConvite')} uppercase tracking-widest`}
+                  />
+                  {campoErro('codigoConvite')}
+                </div>
               </>
             )}
 
@@ -171,10 +187,13 @@ export default function Login({ onLogin, avisoInicial }: LoginProps) {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="seuemail@empresa.com"
+                placeholder={modo === 'cadastrar' ? 'nome@liderkraft.com.br' : 'seuemail@empresa.com'}
                 className={`${inputClasse} ${bordaCampo('email')}`}
               />
               {campoErro('email')}
+              {modo === 'cadastrar' && !erros.email && (
+                <p className="text-xs text-gray-500 mt-1">Apenas e-mails corporativos da Liderkraft.</p>
+              )}
             </div>
 
             <div>

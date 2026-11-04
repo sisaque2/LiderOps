@@ -1,4 +1,4 @@
-const { PERFIS } = require('../config/auth');
+const { PERFIS, DOMINIOS_CADASTRO } = require('../config/auth');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -25,9 +25,17 @@ const userValidator = {
         const erro = validarDadosBasicos(req.body);
         if (erro) return falha(res, erro);
 
-        const { senha } = req.body;
+        const { senha, codigoConvite } = req.body;
         if (!senha || String(senha).length < 6) {
             return falha(res, 'A senha é obrigatória e deve ter pelo menos 6 caracteres.');
+        }
+
+        const dominio = String(req.body.email).trim().toLowerCase().split('@')[1];
+        if (!DOMINIOS_CADASTRO.includes(dominio)) {
+            return falha(res, `Use o seu e-mail corporativo (${DOMINIOS_CADASTRO.map(d => '@' + d).join(' ou ')}).`);
+        }
+        if (!codigoConvite || String(codigoConvite).trim() === '') {
+            return falha(res, 'Informe o código de convite fornecido pelo administrador.');
         }
 
         req.body.nome = req.body.nome.trim();
