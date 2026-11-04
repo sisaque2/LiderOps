@@ -39,6 +39,7 @@ export default function LeadsCleaner({ usuario }: LeadsCleanerProps) {
   const [isExportando, setIsExportando] = useState(false);
 
   const [busca, setBusca] = useState('');
+  const [selecionados, setSelecionados] = useState<Set<number>>(new Set());
   const { confirmar, dialogo } = useConfirmacao();
 
   const ehAdmin = usuario.perfil === 'admin';
@@ -54,6 +55,34 @@ export default function LeadsCleaner({ usuario }: LeadsCleanerProps) {
           (termoDigitos !== '' && (l.cnpj.includes(termoDigitos) || l.cnae.includes(termoDigitos)))
       )
     : leads;
+
+  // Seleção para exportar: vale só para empresas que ainda estão na lista
+  const idsSelecionados = leads.map((l) => l.id_empresa).filter((id): id is number => id !== undefined && selecionados.has(id));
+  const idsFiltrados = leadsFiltrados.map((l) => l.id_empresa).filter((id): id is number => id !== undefined);
+  const todosFiltradosMarcados = idsFiltrados.length > 0 && idsFiltrados.every((id) => selecionados.has(id));
+
+  const alternarSelecao = (id: number) =>
+    setSelecionados((atual) => {
+      const novo = new Set(atual);
+      if (novo.has(id)) novo.delete(id);
+      else novo.add(id);
+      return novo;
+    });
+
+  const alternarTodos = () =>
+    setSelecionados((atual) => {
+      const novo = new Set(atual);
+      idsFiltrados.forEach((id) => (todosFiltradosMarcados ? novo.delete(id) : novo.add(id)));
+      return novo;
+    });
+
+  // Prioridade: linhas marcadas > resultado da busca > base inteira
+  const exportacao =
+    idsSelecionados.length > 0
+      ? { ids: idsSelecionados, rotulo: `Exportar ${idsSelecionados.length} selecionada${idsSelecionados.length > 1 ? 's' : ''}` }
+      : termo
+        ? { ids: idsFiltrados, rotulo: `Exportar resultado da busca (${idsFiltrados.length})` }
+        : { ids: null, rotulo: `Exportar todas (${leads.length})` };
 
   // 1. Carrega as empresas já enriquecidas no MySQL
   useEffect(() => {
@@ -141,7 +170,14 @@ export default function LeadsCleaner({ usuario }: LeadsCleanerProps) {
   const handleExportarExcel = async () => {
     setIsExportando(true);
     try {
-      await apiDownload('/empresas/exportar', 'LiderOps_Base_Higienizada.xlsx');
+      if (exportacao.ids) {
+        await apiDownload('/empresas/exportar', 'LiderOps_Base_Higienizada.xlsx', {
+          method: 'POST',
+          body: JSON.stringify({ ids: exportacao.ids }),
+        });
+      } else {
+        await apiDownload('/empresas/exportar', 'LiderOps_Base_Higienizada.xlsx');
+      }
     } catch (error) {
       setAlerta({ tipo: 'erro', texto: mensagemDeErro(error) });
     } finally {
@@ -274,10 +310,10 @@ export default function LeadsCleaner({ usuario }: LeadsCleanerProps) {
             <h3 className="font-bold text-gray-800 text-lg">Base Higienizada Pronta</h3>
             <button
               onClick={handleExportarExcel}
-              disabled={isExportando || leads.length === 0}
+              disabled={isExportando || leads.length === 0 || exportacao.ids?.length === 0}
               className="border border-gray-300 text-gray-600 px-4 py-2 rounded text-sm hover:bg-gray-50 font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isExportando ? 'Gerando...' : '📥 Exportar para .xlsx'}
+              {isExportando ? 'Gerando...' : `📥 ${exportacao.rotulo}`}
             </button>
           </div>
 
@@ -296,6 +332,11 @@ export default function LeadsCleaner({ usuario }: LeadsCleanerProps) {
                   {leadsFiltrados.length} de {leads.length} empresas
                 </span>
               )}
+              {idsSelecionados.length > 0 && (
+                <button onClick={() => setSelecionados(new Set())} className="text-xs text-blue-700 hover:underline cursor-pointer">
+                  Limpar seleção
+                </button>
+              )}
             </div>
           )}
 
@@ -303,6 +344,16 @@ export default function LeadsCleaner({ usuario }: LeadsCleanerProps) {
             <table className="w-full text-sm text-left">
               <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b">
                 <tr>
+                  <th className="pl-4 py-3 w-8">
+                    <input
+                      type="checkbox"
+                      checked={todosFiltradosMarcados}
+                      onChange={alternarTodos}
+                      disabled={idsFiltrados.length === 0}
+                      aria-label="Selecionar todas as empresas listadas"
+                      className="accent-[#8BC53F] cursor-pointer"
+                    />
+                  </th>
                   <th className="px-4 py-3">CNPJ</th>
                   <th className="px-4 py-3">Razão Social</th>
                   <th className="px-4 py-3">Endereço Principal</th>
@@ -314,7 +365,7 @@ export default function LeadsCleaner({ usuario }: LeadsCleanerProps) {
               <tbody>
                 {leadsFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={ehAdmin ? 6 : 5} className="px-4 py-8 text-center text-gray-400 italic">
+                    <td colSpan={ehAdmin ? 7 : 6} className="px-4 py-8 text-center text-gray-400 italic">
                       {leads.length === 0
                         ? 'Nenhuma empresa enriquecida ainda. Cole os CNPJs ao lado para iniciar.'
                         : 'Nenhuma empresa encontrada para essa busca.'}
@@ -322,7 +373,21 @@ export default function LeadsCleaner({ usuario }: LeadsCleanerProps) {
                   </tr>
                 ) : (
                   leadsFiltrados.map((lead) => (
-                    <tr key={lead.id_empresa ?? lead.cnpj} className="border-b hover:bg-gray-50">
+                    <tr
+                      key={lead.id_empresa ?? lead.cnpj}
+                      className={`border-b hover:bg-gray-50 ${lead.id_empresa !== undefined && selecionados.has(lead.id_empresa) ? 'bg-green-50/60' : ''}`}
+                    >
+                      <td className="pl-4 py-4">
+                        {lead.id_empresa !== undefined && (
+                          <input
+                            type="checkbox"
+                            checked={selecionados.has(lead.id_empresa)}
+                            onChange={() => alternarSelecao(lead.id_empresa as number)}
+                            aria-label={`Selecionar ${lead.razao_social}`}
+                            className="accent-[#8BC53F] cursor-pointer"
+                          />
+                        )}
+                      </td>
                       <td className="px-4 py-4 text-gray-500 whitespace-nowrap">{formatarCnpj(lead.cnpj)}</td>
                       <td className="px-4 py-4 font-medium text-blue-900">{lead.razao_social}</td>
                       <td className="px-4 py-4 text-gray-600">{lead.endereco}</td>
