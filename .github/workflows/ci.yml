@@ -1,0 +1,51 @@
+# Roda a cada push e pull request: confere se o front compila e passa no lint e se a API não tem erro de sintaxe
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  web:
+    name: Front-end (lint + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: liderops-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: liderops-web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  api:
+    name: API (dependências + sintaxe)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: liderops-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: liderops-api/package-lock.json
+      - run: npm ci
+      - name: Verifica a sintaxe de todos os arquivos
+        run: find . -name "*.js" -not -path "./node_modules/*" -print0 | xargs -0 -n1 node --check
+      - name: Carrega todos os módulos (pega require com nome de arquivo errado)
+        run: |
+          node -e "
+          const fs = require('fs'), path = require('path');
+          const arquivos = [];
+          (function andar(d) { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); fs.statSync(p).isDirectory() ? andar(p) : p.endsWith('.js') && arquivos.push(p); } })('src');
+          for (const f of arquivos) require(path.resolve(f));
+          console.log(arquivos.length + ' módulos carregados');
+          "
