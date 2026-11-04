@@ -3,13 +3,14 @@ const router = express.Router();
 const userController = require('../controller/userController');
 const verifyToken = require('../helpers/verify-token');
 const { requireAdmin } = require('../helpers/verify-perfil');
+const { limiteLogin, limiteCadastro } = require('../helpers/limites');
 const {
     validateCadastro, validateLogin, validateUpdate, validateId, validateTrocaSenha, validateNovaSenha
 } = require('../helpers/userValidator');
 
 // Rotas públicas
-router.post('/login', validateLogin, userController.login);
-router.post('/', validateCadastro, userController.register);
+router.post('/login', limiteLogin, validateLogin, userController.login);
+router.post('/', limiteCadastro, validateCadastro, userController.register);
 
 // Rotas autenticadas
 router.get('/me', verifyToken, userController.me);
