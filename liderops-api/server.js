@@ -3,6 +3,7 @@ const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
 require('dotenv').config();
 
 const userRoutes = require('./src/routes/userRoutes');
@@ -25,6 +26,8 @@ app.use(helmet({
     strictTransportSecurity: usaHttps,
     contentSecurityPolicy: { directives: { upgradeInsecureRequests: usaHttps ? [] : null } }
 }));
+// Compacta (gzip) as respostas: o JS do front cai de ~280 KB para ~85 KB na rede
+app.use(compression());
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 
